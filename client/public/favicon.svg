@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark background -->
+  <rect width="64" height="64" rx="12" fill="#14181C"/>
+  
+  <!-- Film strip -->
+  <rect x="12" y="16" width="40" height="32" rx="2" fill="#2C3440"/>
+  
+  <!-- Film perforations -->
+  <circle cx="18" cy="20" r="2" fill="#14181C"/>
+  <circle cx="18" cy="28" r="2" fill="#14181C"/>
+  <circle cx="18" cy="36" r="2" fill="#14181C"/>
+  <circle cx="18" cy="44" r="2" fill="#14181C"/>
+  
+  <circle cx="46" cy="20" r="2" fill="#14181C"/>
+  <circle cx="46" cy="28" r="2" fill="#14181C"/>
+  <circle cx="46" cy="36" r="2" fill="#14181C"/>
+  <circle cx="46" cy="44" r="2" fill="#14181C"/>
+  
+  <!-- Chart bars in Letterboxd orange -->
+  <rect x="24" y="40" width="4" height="8" rx="1" fill="#FF8000"/>
+  <rect x="30" y="36" width="4" height="12" rx="1" fill="#FF8000"/>
+  <rect x="36" y="32" width="4" height="16" rx="1" fill="#FF8000"/>
+</svg> 

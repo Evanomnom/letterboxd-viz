@@ -36,10 +36,11 @@ pids
 
 # Batch files
 *.bat
+*.sh
 
 # GitHub setup files
 setup-github.md
-init_github.sh
+# init_github.sh - now covered by *.sh pattern above
 
 # OS specific files
 .DS_Store
