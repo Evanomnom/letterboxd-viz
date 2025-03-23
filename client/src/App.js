@@ -18,7 +18,7 @@ function App() {
           </Routes>
         </main>
         <footer>
-          <p>© 2023 Letterboxd Visualizer | Not affiliated with Letterboxd</p>
+          <p>Not affiliated with Letterboxd</p>
         </footer>
       </div>
     </Router>

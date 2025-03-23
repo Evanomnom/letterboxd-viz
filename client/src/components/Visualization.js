@@ -9,9 +9,9 @@ const Visualization = () => {
   const [error, setError] = useState(null);
   const [diaryData, setDiaryData] = useState([]);
   const [stats, setStats] = useState(null);
+  const [currentYear, setCurrentYear] = useState(null);
   
-  const monthlyChartRef = useRef(null);
-  const ratingsChartRef = useRef(null);
+  const contributionChartRef = useRef(null);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -56,22 +56,61 @@ const Visualization = () => {
     // Calculate average rating
     let ratingSum = 0;
     Object.keys(ratingCounts).forEach(rating => {
-      ratingSum += parseInt(rating) * ratingCounts[rating];
+      ratingSum += parseFloat(rating) * ratingCounts[rating];
     });
     
     const avgRating = totalRated > 0 ? (ratingSum / totalRated).toFixed(1) : 'N/A';
     
+    // Process dates for contribution chart
+    const dateMap = {};
+    const weekMap = {};
+    
+    // Get the range of dates
+    let minDate = new Date();
+    let maxDate = new Date(2000, 0, 1);
+    
+    // Count movies by day and week for the contribution chart
+    data.forEach(entry => {
+      if (entry.date) {
+        const dateObj = new Date(entry.date);
+        if (!isNaN(dateObj.getTime())) {
+          const dateStr = dateObj.toISOString().split('T')[0];
+          
+          if (dateObj < minDate) minDate = new Date(dateObj);
+          if (dateObj > maxDate) maxDate = new Date(dateObj);
+          
+          dateMap[dateStr] = (dateMap[dateStr] || 0) + 1;
+          
+          // Calculate week number (ISO week: first day is Monday, first week has first Thursday)
+          const firstDayOfYear = new Date(dateObj.getFullYear(), 0, 1);
+          const pastDaysOfYear = (dateObj - firstDayOfYear) / 86400000;
+          const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+          
+          // Create a week key in format YYYY-WW
+          const weekKey = `${dateObj.getFullYear()}-${weekNum.toString().padStart(2, '0')}`;
+          weekMap[weekKey] = (weekMap[weekKey] || 0) + 1;
+        }
+      }
+    });
+    
+    // Use the full date range from the user's history
+    // For startDate, use January 1st of the earliest year
+    // For endDate, use December 31st of the latest year
+    const startDate = new Date(minDate.getFullYear(), 0, 1);
+    const endDate = new Date(maxDate.getFullYear(), 11, 31);
+    
+    // Set current year to the most recent year by default
+    setCurrentYear(maxDate.getFullYear());
+    
     // Count movies by month
-    const moviesByMonth = {};
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                        'July', 'August', 'September', 'October', 'November', 'December'];
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+    const moviesByMonth = {};
     
     data.forEach(entry => {
       if (entry.date) {
-        // Parse the date format YYYY-MM-DD
         const dateParts = entry.date.split('-');
         if (dateParts.length === 3) {
-          // Get month number (0-indexed in JS Date)
           const monthIndex = parseInt(dateParts[1]) - 1;
           const monthName = monthNames[monthIndex];
           
@@ -85,152 +124,332 @@ const Visualization = () => {
       totalRated,
       avgRating,
       ratingCounts,
-      moviesByMonth
+      moviesByMonth,
+      dateMap,
+      weekMap,
+      startDate,
+      endDate
     });
   };
   
-  // Use useCallback to memoize the chart creation functions
-  const createMonthlyChart = useCallback(() => {
-    if (!monthlyChartRef.current || !stats?.moviesByMonth) return;
+  // Create the GitHub-style contribution chart
+  const createContributionChart = useCallback(() => {
+    if (!contributionChartRef.current || !stats?.dateMap || !currentYear) return;
     
     // Clear previous chart
-    d3.select(monthlyChartRef.current).selectAll('*').remove();
+    d3.select(contributionChartRef.current).selectAll('*').remove();
     
-    const data = Object.entries(stats.moviesByMonth).map(([month, count]) => ({ month, count }));
+    const { dateMap, startDate, endDate } = stats;
     
-    // Sort by month
-    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+    // Count movies per year
+    const moviesPerYear = {};
+    Object.entries(dateMap).forEach(([dateStr, count]) => {
+      const year = dateStr.split('-')[0];
+      moviesPerYear[year] = (moviesPerYear[year] || 0) + count;
+    });
+    
+    // Define month names
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                          'July', 'August', 'September', 'October', 'November', 'December'];
     
-    data.sort((a, b) => monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month));
+    // Define dimensions
+    const cellSize = 15;
+    const cellMargin = 3;
+    const fullCellSize = cellSize + cellMargin;
     
-    const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-    const width = monthlyChartRef.current.clientWidth - margin.left - margin.right;
-    const height = 300 - margin.top - margin.bottom;
+    // Determine the date range
+    const startYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+    const numYears = endYear - startYear + 1;
     
-    const svg = d3.select(monthlyChartRef.current)
-      .append('svg')
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
+    // Create grid cells for each day for the current year only
+    const gridData = [];
+    
+    // Get first day of current year
+    const yearStart = new Date(currentYear, 0, 1);
+    // Get last day of current year
+    const yearEnd = new Date(currentYear, 11, 31);
+    
+    // Create dates for each day in the year
+    let currentDate = new Date(yearStart);
+    while (currentDate <= yearEnd) {
+      const month = currentDate.getMonth();
+      const day = currentDate.getDate();
+      const dayOfWeek = currentDate.getDay(); // 0-6, Sunday to Saturday
+      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      gridData.push({
+        year: currentYear,
+        month,
+        day,
+        dayOfWeek,
+        dateStr,
+        count: dateMap[dateStr] || 0
+      });
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Define dimensions for the chart
+    const margin = { top: 50, right: 40, bottom: 50, left: 30 };
+    const daysPerWeek = 7;
+    
+    // Calculate total number of days in the year
+    const totalDays = gridData.length;
+    // Calculate how many columns we need (days/7 rounded up)
+    const totalColumns = Math.ceil(totalDays / daysPerWeek);
+    // Set the width based on the number of columns
+    const width = totalColumns * fullCellSize + margin.left + margin.right;
+    const height = daysPerWeek * fullCellSize + margin.top + margin.bottom;
+    
+    // Create the SVG element
+    const chartContainer = d3.select(contributionChartRef.current);
+    
+    // Add year navigation controls
+    const yearControlsDiv = chartContainer.selectAll('.year-controls').data([0]);
+    
+    const yearControlsEnter = yearControlsDiv.enter()
+      .append('div')
+      .attr('class', 'year-controls')
+      .style('margin-bottom', '15px')
+      .style('display', 'flex')
+      .style('justify-content', 'center')
+      .style('align-items', 'center');
+    
+    // Merge enter and update selections
+    const yearControls = yearControlsEnter.merge(yearControlsDiv);
+    
+    // Clear existing year controls content and recreate
+    yearControls.selectAll('*').remove();
+    
+    // Add previous year button
+    yearControls.append('button')
+      .attr('class', 'year-nav-btn prev-year')
+      .text('← Previous Year')
+      .style('margin-right', '10px')
+      .style('opacity', currentYear <= startYear ? '0.5' : '1')
+      .style('cursor', currentYear <= startYear ? 'default' : 'pointer')
+      .on('click', function() {
+        if (currentYear > startYear) {
+          setCurrentYear(currentYear - 1);
+        }
+      });
+    
+    // Add year display with movie count
+    const currentYearMovies = moviesPerYear[currentYear.toString()] || 0;
+    yearControls.append('div')
+      .attr('class', 'current-year-display')
+      .style('font-size', '18px')
+      .style('font-weight', 'bold')
+      .style('margin', '0 15px')
+      .html(`${currentYear} <span style="font-size: 16px; color: #bbb;">(${currentYearMovies} movies)</span>`);
+    
+    // Add next year button
+    yearControls.append('button')
+      .attr('class', 'year-nav-btn next-year')
+      .text('Next Year →')
+      .style('margin-left', '10px')
+      .style('opacity', currentYear >= endYear ? '0.5' : '1')
+      .style('cursor', currentYear >= endYear ? 'default' : 'pointer')
+      .on('click', function() {
+        if (currentYear < endYear) {
+          setCurrentYear(currentYear + 1);
+        }
+      });
+    
+    // Remove existing SVG and recreate
+    chartContainer.selectAll('svg').remove();
+    
+    const svg = chartContainer.append('svg')
+      .attr('width', width)
+      .attr('height', height)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
     
-    // X axis
-    const x = d3.scaleBand()
-      .domain(data.map(d => d.month))
-      .range([0, width])
-      .padding(0.2);
+    // Define the color scale based on number of movies watched - using GitHub-style greens
+    // Now using a fixed scale from 0-4+ for all users
+    const colorScale = d3.scaleSequential()
+      .domain([0, 4]) // Fixed scale from 0-4 for all users
+      .interpolator(d3.interpolateGreens);
     
-    svg.append('g')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x))
-      .selectAll('text')
-      .attr('transform', 'translate(-10,0)rotate(-45)')
-      .style('text-anchor', 'end')
-      .style('fill', '#bbb');
+    // Function to map actual movie count to color scale (anything above 4 gets the 4 color)
+    const getColor = (count) => {
+      if (count === 0) return '#2c2c2c';
+      return colorScale(Math.min(count, 4));
+    };
     
-    // Y axis
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(data, d => d.count) * 1.1])
-      .range([height, 0]);
+    // Create a continuous calendar layout
+    // First, get day of week for first day of year (to offset the grid)
+    const firstDayOfWeek = new Date(currentYear, 0, 1).getDay();
     
-    svg.append('g')
-      .call(d3.axisLeft(y))
-      .selectAll('text')
-      .style('fill', '#bbb');
+    // Calculate total weeks in the year for the grid
+    const totalWeeks = Math.ceil((getDayOfYear(new Date(currentYear, 11, 31)) + firstDayOfWeek) / 7);
     
-    // Bars
-    svg.selectAll('rect')
-      .data(data)
-      .join('rect')
-      .attr('x', d => x(d.month))
-      .attr('y', d => y(d.count))
-      .attr('width', x.bandwidth())
-      .attr('height', d => height - y(d.count))
-      .attr('fill', '#ff8000');
+    // Create a grid of all possible cells - this ensures no gaps
+    const calendarGrid = [];
+    for (let week = 0; week < totalWeeks; week++) {
+      for (let day = 0; day < 7; day++) {
+        // Calculate the actual day of year this cell represents
+        const dayOfYear = week * 7 + day - firstDayOfWeek;
+        
+        // Only create cells for valid days in the year
+        if (dayOfYear >= 0 && dayOfYear < gridData.length) {
+          const dayData = gridData[dayOfYear];
+          calendarGrid.push({
+            week,
+            weekday: day,
+            dayOfYear,
+            data: dayData
+          });
+        }
+      }
+    }
     
-    // Title
-    svg.append('text')
-      .attr('x', width / 2)
-      .attr('y', 0 - margin.top / 2)
+    // Add month labels at appropriate positions
+    const monthLabelPositions = [];
+    for (let m = 0; m < 12; m++) {
+      // Find the first day of this month
+      const firstDayOfMonth = new Date(currentYear, m, 1);
+      const dayOfYear = getDayOfYear(firstDayOfMonth) - 1;
+      const adjustedDayOfYear = dayOfYear + firstDayOfWeek;
+      const weekNum = Math.floor(adjustedDayOfYear / 7);
+      
+      monthLabelPositions.push({
+        month: m,
+        x: weekNum * fullCellSize
+      });
+    }
+    
+    // Add month labels
+    svg.selectAll('.month-label')
+      .data(monthLabelPositions)
+      .enter()
+      .append('text')
+      .attr('class', 'month-label')
+      .attr('x', d => d.x)
+      .attr('y', -15)
+      .attr('text-anchor', 'start')
+      .attr('fill', '#aaa')
+      .text(d => monthNames[d.month].substring(0, 3));
+    
+    // Add day of week labels
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    svg.selectAll('.day-label')
+      .data(dayNames)
+      .enter()
+      .append('text')
+      .attr('class', 'day-label')
+      .attr('x', -5)
+      .attr('y', (d, i) => i * fullCellSize + cellSize / 2)
+      .attr('text-anchor', 'end')
+      .attr('dominant-baseline', 'middle')
+      .attr('fill', '#888')
+      .attr('font-size', '10px')
+      .text(d => d);
+    
+    // Position each day in the grid using the calendar grid
+    calendarGrid.forEach(cell => {
+      // We already verified this cell has valid data
+      const day = cell.data;
+      
+      // Create the rectangle for this day
+      svg.append('rect')
+        .attr('class', 'day')
+        .attr('width', cellSize)
+        .attr('height', cellSize)
+        .attr('x', cell.week * fullCellSize)
+        .attr('y', cell.weekday * fullCellSize)
+        .attr('rx', 2)
+        .attr('ry', 2)
+        .attr('fill', getColor(day.count))
+        .attr('stroke', '#1f1f1f')
+        .attr('stroke-width', 1)
+        .on('mouseover', function() {
+          d3.select(this)
+            .attr('stroke', '#4c9a52')
+            .attr('stroke-width', 2);
+        })
+        .on('mouseout', function() {
+          d3.select(this)
+            .attr('stroke', '#1f1f1f')
+            .attr('stroke-width', 1);
+        })
+        .append('title')
+        .text(`${monthNames[day.month]} ${day.day}, ${day.year}: ${day.count} movie${day.count !== 1 ? 's' : ''}`);
+    });
+    
+    // Add legend at the bottom of the chart with more space
+    const legendY = daysPerWeek * fullCellSize + 20; // Position below the grid with padding
+    const legendX = 0; // Left-aligned
+    
+    const legend = svg.append('g')
+      .attr('class', 'legend')
+      .attr('transform', `translate(${legendX},${legendY})`);
+    
+    // Fixed legend with 0-4+ values
+    const legendItems = [
+      { value: 0, label: '0' },
+      { value: 1, label: '1' },
+      { value: 2, label: '2' },
+      { value: 3, label: '3' },
+      { value: 4, label: '4+' }
+    ];
+    
+    legend.append('text')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('fill', '#e0e0e0')
+      .attr('font-size', '12px')
+      .text('Movies per day:');
+    
+    const legendItemWidth = 50; // Wider spacing for better readability
+    
+    legend.selectAll('.legend-item')
+      .data(legendItems)
+      .enter()
+      .append('rect')
+      .attr('class', 'legend-item')
+      .attr('x', (d, i) => 100 + i * legendItemWidth)
+      .attr('y', -10)
+      .attr('width', cellSize)
+      .attr('height', cellSize)
+      .attr('rx', 2)
+      .attr('ry', 2)
+      .attr('fill', d => {
+        if (d.value === 0) return '#2c2c2c';
+        return colorScale(d.value);
+      })
+      .attr('stroke', '#1f1f1f')
+      .attr('stroke-width', 1);
+    
+    legend.selectAll('.legend-label')
+      .data(legendItems)
+      .enter()
+      .append('text')
+      .attr('class', 'legend-label')
+      .attr('x', (d, i) => 100 + i * legendItemWidth + cellSize / 2)
+      .attr('y', 15)
       .attr('text-anchor', 'middle')
-      .style('font-size', '16px')
-      .style('fill', '#e0e0e0')
-      .text('Movies Watched by Month');
-  }, [stats]);
-  
-  const createRatingsChart = useCallback(() => {
-    if (!ratingsChartRef.current || !stats?.ratingCounts) return;
-    
-    // Clear previous chart
-    d3.select(ratingsChartRef.current).selectAll('*').remove();
-    
-    const data = Object.entries(stats.ratingCounts)
-      .map(([rating, count]) => ({ rating: parseFloat(rating), count }))
-      .sort((a, b) => a.rating - b.rating);
-    
-    console.log("Rating data for chart:", data);
-    
-    const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-    const width = ratingsChartRef.current.clientWidth - margin.left - margin.right;
-    const height = 300 - margin.top - margin.bottom;
-    
-    const svg = d3.select(ratingsChartRef.current)
-      .append('svg')
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
-      .append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
-    
-    // X axis with decimal values
-    const x = d3.scaleBand()
-      .domain(data.map(d => d.rating.toString()))
-      .range([0, width])
-      .padding(0.2);
-    
-    svg.append('g')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x))
-      .selectAll('text')
-      .style('fill', '#bbb');
-    
-    // Y axis
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(data, d => d.count) * 1.1])
-      .range([height, 0]);
-    
-    svg.append('g')
-      .call(d3.axisLeft(y))
-      .selectAll('text')
-      .style('fill', '#bbb');
-    
-    // Bars
-    svg.selectAll('rect')
-      .data(data)
-      .join('rect')
-      .attr('x', d => x(d.rating.toString()))
-      .attr('y', d => y(d.count))
-      .attr('width', x.bandwidth())
-      .attr('height', d => height - y(d.count))
-      .attr('fill', '#ff8000');
-    
-    // Title
-    svg.append('text')
-      .attr('x', width / 2)
-      .attr('y', 0 - margin.top / 2)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '16px')
-      .style('fill', '#e0e0e0')
-      .text('Rating Distribution');
-  }, [stats]);
+      .attr('fill', '#aaa')
+      .attr('font-size', '10px')
+      .text(d => d.label);
+      
+    // Helper function to get day of year
+    function getDayOfYear(date) {
+      const start = new Date(date.getFullYear(), 0, 0);
+      const diff = date - start;
+      const oneDay = 1000 * 60 * 60 * 24;
+      return Math.floor(diff / oneDay);
+    }
+  }, [stats, currentYear]);
   
   // Create charts once data is loaded
   useEffect(() => {
     if (!loading && !error && stats && diaryData.length > 0) {
-      createMonthlyChart();
-      createRatingsChart();
+      createContributionChart();
     }
-  }, [loading, error, stats, diaryData, createMonthlyChart, createRatingsChart]);
+  }, [loading, error, stats, diaryData, createContributionChart]);
 
   if (loading) {
     return (
@@ -255,36 +474,11 @@ const Visualization = () => {
     <div className="visualization-container">
       <h2>Diary Visualization for {username}</h2>
       
-      {stats && (
-        <div className="stats-summary">
-          <div className="stat-card">
-            <h3>Total Movies</h3>
-            <div className="stat-value">{stats.totalMovies}</div>
-          </div>
-          
-          <div className="stat-card">
-            <h3>Rated Movies</h3>
-            <div className="stat-value">{stats.totalRated}</div>
-          </div>
-          
-          <div className="stat-card">
-            <h3>Average Rating</h3>
-            <div className="stat-value">{stats.avgRating}</div>
-          </div>
-        </div>
-      )}
-      
       <div className="chart-container">
+        <h3>Movie Watching Activity</h3>
         <div 
-          ref={monthlyChartRef} 
-          className="chart monthly-chart"
-          style={{ width: '100%', height: '300px', marginBottom: '30px' }}
-        ></div>
-        
-        <div 
-          ref={ratingsChartRef} 
-          className="chart ratings-chart"
-          style={{ width: '100%', height: '300px' }}
+          ref={contributionChartRef} 
+          className="chart contribution-chart"
         ></div>
       </div>
       
