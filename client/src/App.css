@@ -66,6 +66,8 @@ footer {
 
 input {
   width: 100%;
+  max-width: calc(100% - 24px); /* Accounting for padding */
+  box-sizing: border-box;
   padding: 12px;
   margin: 10px 0;
   border: 1px solid #444;
@@ -265,4 +267,192 @@ svg text {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Movie List Styles */
+.movie-list-container {
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.movie-list-container h3 {
+  color: #e0e0e0;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+}
+
+.movie-count {
+  font-size: 0.9rem;
+  color: #999;
+  margin-left: 10px;
+  font-weight: normal;
+}
+
+.movie-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.movie-item {
+  background-color: #252525;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+  padding: 12px;
+  text-align: center;
+}
+
+.movie-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.movie-details {
+  padding: 0;
+}
+
+.movie-details h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #fff;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.rating-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.movie-rating {
+  display: inline-flex;
+  font-size: 1.2rem;
+  color: #3cb371;
+}
+
+.movie-rating .star, 
+.movie-rating .half-star {
+  color: #3cb371;
+  margin-right: 2px;
+}
+
+.movie-badges {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.rewatch-badge {
+  display: inline-flex;
+  color: #0366d6;
+  font-size: 1.5rem;
+  margin-left: 8px;
+  line-height: 1;
+}
+
+.liked-badge {
+  display: inline-flex;
+  color: #ff8000;
+  font-size: 1.5rem;
+  margin-left: 8px;
+  line-height: 1;
+}
+
+@media (max-width: 600px) {
+  .movie-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Style for movie items with missing posters */
+.no-poster .movie-details {
+  padding-top: 30px;
+}
+
+/* Monthly Bar Chart styles */
+.monthly-chart {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #272727;
+  border-radius: 8px;
+}
+
+.monthly-chart h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #e0e0e0;
+  font-size: 18px;
+  text-align: center;
+}
+
+.monthly-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 200px;
+  margin: 0 10px;
+}
+
+.month-bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 7%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.month-bar-container:hover {
+  transform: translateY(-5px);
+}
+
+.month-bar-container.selected .month-bar {
+  background-color: #4c9a52;
+}
+
+.month-bar-container.selected .month-label {
+  color: #4c9a52;
+  font-weight: bold;
+}
+
+.month-bar {
+  width: 100%;
+  background-color: #3a3a3a;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: background-color 0.3s;
+  min-height: 10px;
+}
+
+.month-bar:hover {
+  background-color: #4c9a52;
+}
+
+.month-count {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #bbb;
+  font-size: 12px;
+  display: none;
+}
+
+.month-bar-container:hover .month-count {
+  display: block;
+}
+
+.month-label {
+  margin-top: 8px;
+  color: #aaa;
+  font-size: 12px;
 }

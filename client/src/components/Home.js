@@ -24,11 +24,7 @@ const Home = () => {
   return (
     <div className="home-container">
       <div className="form-container">
-        <h2>Enter your Letterboxd Username</h2>
-        <p>
-          Enter your Letterboxd username to generate visualizations of your 
-          movie watching history.
-        </p>
+        <h2>Enter Letterboxd Username</h2>
         
         {error && <div className="error">{error}</div>}
         
@@ -45,7 +41,7 @@ const Home = () => {
         
         <div className="info-text">
           <p>
-            This app is not affiliated with 
+            This app is not affiliated with {' '}
             <a href="https://letterboxd.com" target="_blank" rel="noopener noreferrer">
               Letterboxd
             </a>. 

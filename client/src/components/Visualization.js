@@ -10,8 +10,62 @@ const Visualization = () => {
   const [diaryData, setDiaryData] = useState([]);
   const [stats, setStats] = useState(null);
   const [currentYear, setCurrentYear] = useState(null);
+  const [selectedMovies, setSelectedMovies] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
   
   const contributionChartRef = useRef(null);
+  
+  // Filter movies for a specific date
+  const getMoviesForDate = useCallback((dateStr) => {
+    if (!diaryData || !dateStr) return [];
+    const movies = diaryData.filter(movie => movie.date === dateStr);
+    // Reverse the array to show movies in chronological viewing order (oldest to newest)
+    // instead of the default reverse chronological order from the API
+    const sortedMovies = [...movies].reverse();
+    console.log(`Movies for date ${dateStr}:`, sortedMovies);
+    return sortedMovies;
+  }, [diaryData]);
+
+  // Get all movies for a specific month, sorted by viewing date
+  const getMoviesForMonth = useCallback((year, month) => {
+    if (!diaryData) return [];
+    
+    // Filter movies that were watched in the specified month and year
+    const movies = diaryData.filter(movie => {
+      if (!movie.date) return false;
+      const dateParts = movie.date.split('-');
+      return dateParts.length === 3 && 
+             parseInt(dateParts[0]) === year && 
+             parseInt(dateParts[1]) === month;
+    });
+    
+    // Create a map of movies by date for easier sorting
+    const moviesByDate = {};
+    
+    movies.forEach(movie => {
+      if (!moviesByDate[movie.date]) {
+        moviesByDate[movie.date] = [];
+      }
+      moviesByDate[movie.date].push(movie);
+    });
+    
+    // Reverse the order of movies for each day (oldest to newest)
+    Object.keys(moviesByDate).forEach(date => {
+      moviesByDate[date] = moviesByDate[date].reverse();
+    });
+    
+    // Sort by date (ascending - earliest to latest)
+    const sortedDates = Object.keys(moviesByDate).sort();
+    
+    // Flatten the movies back into a single array
+    const sortedMovies = [];
+    sortedDates.forEach(date => {
+      sortedMovies.push(...moviesByDate[date]);
+    });
+    
+    console.log(`Found ${sortedMovies.length} movies for ${year}-${month}`);
+    return sortedMovies;
+  }, [diaryData]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -23,6 +77,17 @@ const Visualization = () => {
           setError(`No diary entries found for user "${username}". Make sure the username is correct and the diary is public.`);
           setLoading(false);
           return;
+        }
+        
+        console.log('Diary data received:', response.data);
+        
+        // Check the first few entries for poster URLs
+        if (response.data.length > 0) {
+          console.log('Sample poster URLs:');
+          for (let i = 0; i < Math.min(5, response.data.length); i++) {
+            console.log(`Movie ${i+1}: ${response.data[i].filmTitle}`);
+            console.log(`- Poster URL: ${response.data[i].posterUrl || 'None'}`);
+          }
         }
         
         setDiaryData(response.data);
@@ -160,7 +225,6 @@ const Visualization = () => {
     // Determine the date range
     const startYear = startDate.getFullYear();
     const endYear = endDate.getFullYear();
-    const numYears = endYear - startYear + 1;
     
     // Create grid cells for each day for the current year only
     const gridData = [];
@@ -331,7 +395,31 @@ const Visualization = () => {
       .attr('y', -15)
       .attr('text-anchor', 'start')
       .attr('fill', '#aaa')
-      .text(d => monthNames[d.month].substring(0, 3));
+      .attr('cursor', 'pointer')
+      .text(d => monthNames[d.month].substring(0, 3))
+      .on('mouseover', function() {
+        d3.select(this).attr('fill', '#4c9a52');
+      })
+      .on('mouseout', function() {
+        d3.select(this).attr('fill', '#aaa');
+      })
+      .on('click', function(event, d) {
+        const monthNumber = d.month + 1; // Convert from 0-indexed to 1-indexed
+        
+        // Get all movies for this month
+        const moviesForMonth = getMoviesForMonth(currentYear, monthNumber);
+        
+        // Set selected date to show the month and year
+        setSelectedDate(`${monthNames[d.month]} ${currentYear}`);
+        
+        // Set selected movies to all movies in this month
+        setSelectedMovies(moviesForMonth);
+        
+        // Reset day highlighting
+        svg.selectAll('rect.day')
+          .attr('stroke', '#1f1f1f')
+          .attr('stroke-width', 1);
+      });
     
     // Add day of week labels
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -374,6 +462,24 @@ const Visualization = () => {
           d3.select(this)
             .attr('stroke', '#1f1f1f')
             .attr('stroke-width', 1);
+        })
+        .on('click', function() {
+          // Get the date string from the day data
+          const dateStr = day.dateStr;
+          setSelectedDate(dateStr);
+          
+          // Filter movies for this date
+          const movies = getMoviesForDate(dateStr);
+          setSelectedMovies(movies);
+          
+          // Highlight this cell and reset others
+          svg.selectAll('rect.day')
+            .attr('stroke', '#1f1f1f')
+            .attr('stroke-width', 1);
+            
+          d3.select(this)
+            .attr('stroke', '#4c9a52')
+            .attr('stroke-width', 2);
         })
         .append('title')
         .text(`${monthNames[day.month]} ${day.day}, ${day.year}: ${day.count} movie${day.count !== 1 ? 's' : ''}`);
@@ -442,7 +548,7 @@ const Visualization = () => {
       const oneDay = 1000 * 60 * 60 * 24;
       return Math.floor(diff / oneDay);
     }
-  }, [stats, currentYear]);
+  }, [stats, currentYear, getMoviesForMonth, getMoviesForDate]);
   
   // Create charts once data is loaded
   useEffect(() => {
@@ -472,15 +578,52 @@ const Visualization = () => {
 
   return (
     <div className="visualization-container">
-      <h2>Diary Visualization for {username}</h2>
+      <h2>Letterboxd Statistics for {username}</h2>
       
-      <div className="chart-container">
-        <h3>Movie Watching Activity</h3>
-        <div 
-          ref={contributionChartRef} 
-          className="chart contribution-chart"
-        ></div>
-      </div>
+      {loading && <div className="loading">Loading diary data...</div>}
+      
+      {error && <div className="error">{error}</div>}
+      
+      {!loading && !error && stats && (
+        <div className="stats-container">
+          <div className="chart-container">
+            <h3>Year Activity</h3>
+            <div ref={contributionChartRef} className="contribution-chart"></div>
+          </div>
+          
+          {selectedMovies && selectedMovies.length > 0 && (
+            <div className="movie-list-container">
+              <h3>
+                {selectedDate && selectedDate.includes('-') ? 
+                  `Movies watched on ${new Date(selectedDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}` : 
+                  `Movies watched in ${selectedDate}`}
+                <span className="movie-count">({selectedMovies.length})</span>
+              </h3>
+              <div className="movie-list">
+                {selectedMovies.map((movie, index) => (
+                  <div key={index} className="movie-item">
+                    <div className="movie-details">
+                      <h4>{movie.filmTitle} {movie.filmYear && `(${movie.filmYear})`}</h4>
+                      <div className="rating-container">
+                        {movie.rating && movie.rating !== 'Not rated' && (
+                          <div className="movie-rating">
+                            {Array.from({ length: Math.floor(parseFloat(movie.rating)) }).map((_, i) => (
+                              <span key={i} className="star">★</span>
+                            ))}
+                            {movie.rating % 1 !== 0 && <span className="half-star">½</span>}
+                          </div>
+                        )}
+                        {movie.liked && <div className="liked-badge">♥</div>}
+                        {movie.rewatch && <div className="rewatch-badge">↻</div>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       <div className="back-button" style={{ marginTop: '20px' }}>
         <Link to="/">

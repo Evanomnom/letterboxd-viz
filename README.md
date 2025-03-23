@@ -2,7 +2,7 @@
 
 A web application that creates visualizations of a user's Letterboxd diary entries. View your movie watching habits with beautiful charts and statistics.
 
-![Letterboxd Visualization Screenshot](screenshots/placeholder.png)
+![Letterboxd Visualization Screenshot](screenshots/Visualizer.png)
 
 ## Overview
 
@@ -13,10 +13,9 @@ Letterboxd Diary Visualizer allows users to enter their Letterboxd username and 
 - Username input for any public Letterboxd profile
 - Web scraping of diary entries across multiple pages
 - Dark mode UI that matches Letterboxd's aesthetic
-- Visualization of movies watched per month
-- Distribution of ratings on a 5-star scale
-- Summary statistics (total movies, rated movies, average rating)
+- GitHub-style contribution chart showing movies watched per day
 - Support for detecting liked films and rewatches
+- View movies watched on a specific day or month
 
 ## Technologies Used
 
@@ -28,16 +27,16 @@ Letterboxd Diary Visualizer allows users to enter their Letterboxd username and 
 ## Screenshots
 
 ### Home Page
-*Add screenshot of home page here*
+![Home Screenshot](screenshots/Home.png)
 
 ### Visualizations
-*Add screenshot of visualizations here*
+![Letterboxd Visualization Screenshot](screenshots/Visualizer.png)
 
 ## Setup and Installation
 
 1. Clone the repository
 ```
-git clone https://github.com/YOUR_USERNAME/letterboxd-viz.git
+git clone https://github.com/Evanomnom/letterboxd-viz.git
 cd letterboxd-viz
 ```
 
@@ -62,7 +61,8 @@ This will run the server on port 5000 and the client on port 3000.
 2. The app calls the backend API with the username
 3. The server scrapes diary data from all pages of the user's public Letterboxd profile
 4. The data is processed and returned to the client
-5. Statistics are calculated and visualizations are generated using D3.js
+5. A GitHub-style contribution chart is generated using D3.js showing movie watching activity
+6. Users can click on individual days or months to see the specific movies watched
 
 ## Important Notes
 
@@ -70,13 +70,6 @@ This will run the server on port 5000 and the client on port 3000.
 - **Public Profiles Only**: This application only works with public Letterboxd profiles
 - **Not Affiliated**: This is not affiliated with or endorsed by Letterboxd
 - **Respectful Scraping**: The app implements a delay between requests to be respectful to Letterboxd's servers
-
-## Future Enhancements
-
-- Additional visualization types (genres, countries, directors)
-- Year-over-year comparisons
-- Export functionality for visualizations
-- Caching to reduce scraping frequency
 
 ## Deployment
 
