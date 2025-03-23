@@ -2,7 +2,7 @@
 
 A web application that creates visualizations of a user's Letterboxd diary entries. View your movie watching habits with beautiful charts and statistics.
 
-![Letterboxd Visualization Screenshot](screenshots/Visualizer.png)
+![Letterboxd Visualization Screenshot](screenshots/Visualizer.PNG)
 
 ## Overview
 
@@ -27,10 +27,10 @@ Letterboxd Diary Visualizer allows users to enter their Letterboxd username and 
 ## Screenshots
 
 ### Home Page
-![Home Screenshot](screenshots/Home.png)
+![Home Screenshot](screenshots/Home.PNG)
 
 ### Visualizations
-![Letterboxd Visualization Screenshot](screenshots/Visualizer.png)
+![Letterboxd Visualization Screenshot](screenshots/Visualizer.PNG)
 
 ## Setup and Installation
 
