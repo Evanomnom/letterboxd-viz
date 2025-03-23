@@ -8,6 +8,16 @@ A web application that creates visualizations of a user's Letterboxd diary entri
 
 Letterboxd Diary Visualizer allows users to enter their Letterboxd username and view visual representations of their movie watching habits. Since Letterboxd doesn't provide an official API, this app scrapes public diary data and transforms it into meaningful visualizations.
 
+## About This Project
+
+This project was developed as:
+
+1. A personal tool for visualizing Letterboxd diary data
+2. An experiment in using Cursor IDE for full-stack development
+3. A practice project for web scraping and data visualization
+
+Cursor IDE's AI-assisted coding capabilities were used throughout development, particularly for setting up the web scraping functionality and D3.js visualizations.
+
 ## Features
 
 - Username input for any public Letterboxd profile
